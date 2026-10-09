@@ -4,6 +4,16 @@ A local web UI for [Oh My Pi (omp)](https://github.com/canmi/oh-my-pi), targetin
 
 A Bun gateway spawns one `omp --mode rpc-ui` child process per opened session and streams protocol frames over WebSocket; a Vite + React client renders the conversation. No component library — hand-written CSS with light/dark themes.
 
+## Screenshots
+
+Home — project and model pickers; the omp process starts on the first message:
+
+![Home screen](docs/screenshots/01-home.png)
+
+Settings — theme, fonts, column width, notifications and Enter behavior:
+
+![Settings dialog](docs/screenshots/02-settings.png)
+
 ## Features
 
 | Area | What you get |
