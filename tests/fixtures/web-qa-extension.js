@@ -21,7 +21,7 @@ export default function webQa(pi) {
 	pi.registerCommand("web-qa-input", {
 		description: "测试：输入弹窗",
 		handler: async (_args, ctx) => {
-			const v = await ctx.ui.input("输入名字", "例如 Rain");
+			const v = await ctx.ui.input("输入名字", "输入任意名字");
 			ctx.ui.notify(`输入：${v ?? "取消"}`, "info");
 		},
 	});
