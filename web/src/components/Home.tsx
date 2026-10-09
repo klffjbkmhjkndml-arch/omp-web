@@ -132,6 +132,12 @@ function HomeModelPicker() {
 	const lockedTo: ModelChoice | undefined = lock ? { provider: lock.provider, id: lock.model, name: lockCached?.name } : undefined;
 	const efforts = cached?.reasoning ? ["off", ...(cached.efforts ?? [])] : [];
 
+	// The chip is disabled while the list is empty, so its onOpen load can never
+	// fire; without this a first-run browser can never pick a model on Home.
+	useEffect(() => {
+		if (a.models.length === 0) void app.loadModelsWithoutSession();
+	}, [a.models.length]);
+
 	return (
 		<ModelPicker
 			current={current}
