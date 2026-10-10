@@ -80,6 +80,7 @@ function AgentDetail({ store, agent }: { store: SessionStore; agent: SubagentSna
 	useEffect(() => {
 		if (!fetchable) return;
 		let alive = true;
+		let fails = 0;
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		const pull = async () => {
 			try {
@@ -89,6 +90,7 @@ function AgentDetail({ store, agent }: { store: SessionStore; agent: SubagentSna
 					fromByte: cursor.current,
 				});
 				if (!alive) return;
+				fails = 0;
 				cursor.current = data?.nextByte ?? cursor.current;
 				const fresh = data?.messages ?? [];
 				if (data?.reset) setMessages(fresh);
@@ -96,9 +98,14 @@ function AgentDetail({ store, agent }: { store: SessionStore; agent: SubagentSna
 				setLoaded(true);
 				setError(undefined);
 			} catch (e) {
-				if (alive) setError((e as Error).message);
+				if (!alive) return;
+				fails++;
+				setError((e as Error).message);
 			}
-			if (alive && running) timer = setTimeout(() => void pull(), POLL_MS);
+			if (!alive || !running) return;
+			// Back off while the gateway is unreachable; poll lazily in hidden tabs.
+			const delay = Math.min(POLL_MS * 2 ** fails, 15_000) * (document.hidden ? 4 : 1);
+			timer = setTimeout(() => void pull(), delay);
 		};
 		void pull();
 		return () => {
