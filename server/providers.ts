@@ -143,13 +143,25 @@ function emitBlock(id: string, provider: Record<string, unknown>): string[] {
 		.map(line => `  ${line}`.replace(/[ \t]+$/, ""));
 }
 
-async function backup(file: string): Promise<void> {
+async function backup(file: string): Promise<string | undefined> {
 	try {
 		const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-		await Bun.write(`${file}.bak-${stamp}`, Bun.file(file));
+		const dest = `${file}.bak-${stamp}`;
+		await Bun.write(dest, Bun.file(file));
+		return dest;
 	} catch {
-		// nothing to back up yet (first write)
+		return undefined; // nothing to back up yet (first write)
 	}
+}
+
+/** Order-insensitive serialization, for verifying a surgical write round-trips. */
+function canonical(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+	if (value && typeof value === "object") {
+		const obj = value as Record<string, unknown>;
+		return `{${Object.keys(obj).sort().map(k => `${JSON.stringify(k)}:${canonical(obj[k])}`).join(",")}}`;
+	}
+	return JSON.stringify(value ?? null);
 }
 
 /** Create or replace one provider, leaving the rest of the file untouched. */
@@ -158,7 +170,8 @@ export async function writeProvider(id: string, patch: ProviderConfig): Promise<
 	const file = modelsFile();
 	const text = (await readText()) ?? "";
 	const existing = parsedProviders(text).get(providerId) ?? {};
-	const block = emitBlock(providerId, mergeProvider(existing, patch));
+	const intended = mergeProvider(existing, patch);
+	const block = emitBlock(providerId, intended);
 
 	const lines = text ? text.split("\n") : [];
 	const located = locate(lines, providerId);
@@ -172,8 +185,17 @@ export async function writeProvider(id: string, patch: ProviderConfig): Promise<
 		if (lines.length > 0) lines.push("");
 		lines.push("providers:", ...block);
 	}
-	await backup(file);
-	await Bun.write(file, `${lines.join("\n").replace(/\n+$/, "")}\n`);
+	const next = `${lines.join("\n").replace(/\n+$/, "")}\n`;
+	const bak = await backup(file);
+	await Bun.write(file, next);
+	// The splice is positional; if the block landed wrong, undo rather than
+	// leave omp a models.yml it cannot read.
+	const written = parsedProviders(next).get(providerId);
+	if (canonical(written) !== canonical(intended)) {
+		if (bak) await Bun.write(file, Bun.file(bak));
+		else await Bun.write(file, text);
+		throw new Error("写入后校验失败，已回滚 models.yml");
+	}
 	return readProviders();
 }
 
