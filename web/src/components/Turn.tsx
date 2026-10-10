@@ -149,7 +149,7 @@ function StepList({ steps, live, subagents, onOpenSubagent }: { steps: Step[]; l
 					case "text":
 						return (
 							<div key={s.key} className={`step-text ${live && isLast && s.live ? "" : "dim"}`}>
-								<Markdown text={s.text} className={live && isLast && s.live ? "caret" : ""} />
+								<Markdown text={s.text} live={Boolean(live && isLast && s.live)} className={live && isLast && s.live ? "caret" : ""} />
 							</div>
 						);
 					case "tool":

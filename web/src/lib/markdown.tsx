@@ -94,7 +94,9 @@ function onClick(e: React.MouseEvent<HTMLDivElement>): void {
 	});
 }
 
-export const Markdown = memo(function Markdown({ text, className }: { text: string; className?: string }) {
-	const html = useMemo(() => renderMarkdown(text), [text]);
+export const Markdown = memo(function Markdown({ text, className, live }: { text: string; className?: string; live?: boolean }) {
+	// While streaming, text changes every frame; the full pipeline costs tens of
+	// ms per run, so live steps render escaped text and settle into markdown after.
+	const html = useMemo(() => (live ? escapeHtml(text).replace(/\n/g, "<br>") : renderMarkdown(text)), [text, live]);
 	return <div className={`md ${className ?? ""}`} onClick={onClick} dangerouslySetInnerHTML={{ __html: html }} />;
 });
